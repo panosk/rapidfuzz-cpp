@@ -6,6 +6,7 @@
 #include <rapidfuzz/details/string_metrics/levenshtein_impl.hpp>
 #include <rapidfuzz/details/string_metrics/weighted_levenshtein_impl.hpp>
 #include <rapidfuzz/details/string_metrics/generic_levenshtein_impl.hpp>
+#include <rapidfuzz/details/string_metrics/jaro_similarity_impl.hpp>
 
 #include <cmath>
 #include <numeric>
@@ -477,6 +478,14 @@ private:
   rapidfuzz::basic_string_view<CharT1> s1_view;
 };
 
+
+template <typename Sentence1, typename Sentence2>
+double jaro_similarity(const Sentence1& s1, const Sentence2& s2, double score_cutoff = 0.0)
+{
+  auto sentence1 = common::to_string_view(s1);
+  auto sentence2 = common::to_string_view(s2);
+  return detail::jaro_similarity(sentence1, sentence2);
+}
 
 /**@}*/
 
