@@ -162,6 +162,36 @@ bool CanTypeFitValue(const U value) {
   return !( (botT > botU && value < static_cast<U> (botT)) || (topT < topU && value > static_cast<U> (topT)) );
 }
 
+template <
+  typename CharT1, typename ValueType,
+  typename UCharT1 = typename std::make_unsigned<CharT1>::type,
+  std::size_t N = std::numeric_limits<UCharT1>::max()>
+struct DynamicCharLookupTable {
+  std::array<ValueType, N> m_val;
+  ValueType m_default;
+
+  DynamicCharLookupTable()
+    : m_val{}, m_default{} {}
+
+  template<typename CharT2>
+  ValueType& operator[](CharT2 ch) {
+    if (!CanTypeFitValue<CharT1>(ch)) {
+      return m_default;
+    }
+
+    return m_val[UCharT1(ch)];
+  }
+
+  template<typename CharT2>
+  const ValueType& operator[](CharT2 ch) const {
+    if (!CanTypeFitValue<CharT1>(ch)) {
+      return m_default;
+    }
+
+    return m_val[UCharT1(ch)];
+  }
+};
+
 template <typename CharT1, std::size_t size=sizeof(CharT1)>
 struct PatternMatchVector;
 
@@ -222,13 +252,11 @@ struct PatternMatchVector {
 
 template <typename CharT1>
 struct PatternMatchVector<CharT1, 1> {
-  std::array<uint64_t, 256> m_val;
+  DynamicCharLookupTable<CharT1, uint64_t> CharTable;
 
-  PatternMatchVector()
-    : m_val() {}
+  PatternMatchVector() {}
 
   PatternMatchVector(basic_string_view<CharT1> s)
-    : m_val()
   {
     for (std::size_t i = 0; i < s.size(); i++){
       insert(s[i], static_cast<int>(i));
@@ -236,16 +264,12 @@ struct PatternMatchVector<CharT1, 1> {
   }
 
   void insert(CharT1 ch, int pos) {
-    m_val[uint8_t(ch)] |= 1ull << pos;
+    CharTable[ch] |= 1ull << pos;
   }
 
   template<typename CharT2>
   uint64_t get(CharT2 ch) const {
-    if (!CanTypeFitValue<CharT1>(ch)) {
-      return 0;
-    }
-
-    return m_val[uint8_t(ch)];
+    return CharTable[ch];
   }
 };
 

@@ -68,7 +68,7 @@ percent partial_ratio(const Sentence1& s1, const Sentence2& s2, percent score_cu
   }
 
   double max_ratio = 0;
-  for (const auto& block : blocks) {
+  /*for (const auto& block : blocks) {
     std::size_t long_start = (block.dpos > block.spos) ? block.dpos - block.spos : 0;
     auto long_substr = s2_view.substr(long_start, s1_view.length());
 
@@ -77,7 +77,7 @@ percent partial_ratio(const Sentence1& s1, const Sentence2& s2, percent score_cu
     if (ls_ratio > max_ratio) {
       score_cutoff = max_ratio = ls_ratio;
     }
-  }
+  }*/
 
   return max_ratio;
 }
