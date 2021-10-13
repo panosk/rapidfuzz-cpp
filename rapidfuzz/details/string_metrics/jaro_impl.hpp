@@ -21,12 +21,12 @@ double jaro_winkler_short(basic_string_view<CharT1> P, basic_string_view<CharT2>
     uint64_t P_mapped = 0;
     uint64_t T_mapped = 0;
     uint64_t Bound = std::max(P.size(), T.size()) / 2 - 1;
-    uint64_t BoundMask = blsmsk(1ull << Bound);
+    uint64_t BoundMask = (1ull << 1 << Bound) - 1;
     PatternMatchVector PM(P);
 
     /* Looking only within the search range, count and map the matched pairs. */
     int j = 0;
-    for (; j < std::min(Bound, T.size()) + 1; ++j)
+    for (; j <= std::min(Bound, T.size()); ++j)
     {
         uint64_t PM_j = PM.get(T[j]) & BoundMask & (~P_mapped);
 
@@ -69,7 +69,7 @@ double jaro_winkler_short(basic_string_view<CharT1> P, basic_string_view<CharT2>
     Sim /= 3.0;
 
     /* Continue to boost the similarity if the strings are similar */
-    if (winklerize && Sim > 0.7 && Prefix) {
+    if (winklerize && Sim > 0.7) {
         
         std::size_t min_len = std::min(P.size(), T.size());
         std::size_t j = std::min(min_len, 4);
