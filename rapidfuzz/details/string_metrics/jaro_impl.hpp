@@ -9,6 +9,84 @@ namespace detail {
 
 #define NOTNUM(c) ((c > 57) || (c < 48))
 
+template <typename CharT1, typename CharT2>
+double jaro_winkler_short(basic_string_view<CharT1> P, basic_string_view<CharT2> T, int winklerize,
+                     double prefix_weight = 0.1)
+{
+    using namespace intrinsics;
+
+    /* ensure that neither string is blank */
+    if (P.empty() || T.empty()) return 0;
+
+    uint64_t P_mapped = 0;
+    uint64_t T_mapped = 0;
+    uint64_t Bound = std::max(P.size(), T.size()) / 2 - 1;
+    uint64_t BoundMask = blsmsk(1ull << Bound);
+    PatternMatchVector PM(P);
+
+    /* Looking only within the search range, count and map the matched pairs. */
+    int j = 0;
+    for (; j < std::min(Bound, T.size()) + 1; ++j)
+    {
+        uint64_t PM_j = PM.get(T[j]) & BoundMask & (~P_mapped);
+
+        P_mapped |= blsi(PM_j);
+        T_mapped |= (uint64_t)(PM_j != 0) << j;
+
+        BoundMask = (BoundMask << 1) | 1;
+    }
+
+    for (; j < T.size(); ++j)
+    {
+        uint64_t PM_j = PM.get(T[j]) & BoundMask & (~P_mapped);
+
+        P_mapped |= blsi(PM_j);
+        T_mapped |= (uint64_t)(PM_j != 0) << j;
+
+        BoundMask <<= 1;
+    }
+
+    int CommonChars = popcount64(P_mapped);
+
+    // If no characters in common - return
+    if (!CommonChars) {
+        return 0;
+    }
+
+    int Transpositions = 0;
+    while (T_mapped)
+    {
+        Transpositions += T[tzcnt(T_mapped)] == P[tzcnt(P_mapped)];
+
+        T_mapped = blsi(T_mapped);
+        P_mapped = blsi(P_mapped);
+    }
+
+    Transpositions /= 2;
+    double Sim = (double)CommonChars / ((double)P.size()) +
+                    (double)CommonChars / ((double)T.size()) +
+                    ((double)(CommonChars - Transpositions)) / ((double)CommonChars);
+    Sim /= 3.0;
+
+    /* Continue to boost the similarity if the strings are similar */
+    if (winklerize && Sim > 0.7 && Prefix) {
+        
+        std::size_t min_len = std::min(P.size(), T.size());
+        std::size_t j = std::min(min_len, 4);
+        std::size_t Prefix = 0;
+        while (Prefix < j && common::mixed_sign_equal(P[i], T[i]) && NOTNUM(P[i]))
+        {
+            Prefix++;
+        }
+
+        if (Prefix) {
+            Sim += (double)Prefix * prefix_weight * (1.0 - Sim);
+        }
+    }
+
+    return Sim;
+}
+
 /* For now this implementation is ported from
  * https://github.com/jamesturk/cjellyfish
  *
